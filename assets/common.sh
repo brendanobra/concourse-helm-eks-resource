@@ -5,6 +5,15 @@ generate_awscli_kubeconfig() {
   # Optional. Use the AWS EKS authenticator
   assume_aws_role=$(jq -r '.source.assume_aws_role // ""' < $payload)
   aws_region=$(jq -r '.source.aws_region // ""' < $payload)
+  aws_access_key_id=$(jq -r '.source.aws_access_key_id // ""' < $payload)
+  aws_access_secret_key=$(jq -r '.source.aws_access_secret_key // ""' < $payload)
+  if [ ! -z "$aws_access_key_id" ]; then
+     export AWS_ACCESS_KEY_ID=$aws_access_key_id
+     export AWS_SECRET_ACCESS_KEY=$aws_access_secret_key
+     export AWS_REGION=$aws_region
+     
+  fi
+  
   if [ ! -z "$assume_aws_role" ]; then
     if [ -z "$aws_region" ]; then
       echo 'No aws region specified in the source configuration with parameter aws_region. Defaulting to eu-west-1.'
@@ -14,6 +23,7 @@ generate_awscli_kubeconfig() {
     export temp_credentials=$(aws sts assume-role --role-arn $assume_aws_role --role-session-name concourse-helm-resource-session)
     export AWS_ACCESS_KEY_ID=$(echo ${temp_credentials} | jq -r '.Credentials.AccessKeyId') AWS_SESSION_TOKEN=$(echo ${temp_credentials} | jq -r '.Credentials.SessionToken') AWS_SECRET_ACCESS_KEY=$(echo ${temp_credentials} | jq -r ' .Credentials.SecretAccessKey') AWS_DEFAULT_REGION=$aws_region
   fi
+  
   local aws_eks_cluster_name
   aws_eks_cluster_name="$(jq -r '.source.aws_eks_cluster_name // ""' < "$payload")"
   aws eks update-kubeconfig --name $aws_eks_cluster_name
